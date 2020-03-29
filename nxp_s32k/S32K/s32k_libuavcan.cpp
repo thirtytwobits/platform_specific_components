@@ -10,7 +10,7 @@
  * CAN-FD at 4Mbit/s data phase and 1Mbit/s in nominal phase.
  */
 
-#include "s32k_libuavcan.hpp"
+#include "libuavcan/media/S32K/s32k_libuavcan.hpp"
 
 namespace libuavcan
 {
@@ -155,6 +155,8 @@ libuavcan::Result S32K_InterfaceGroup::messageBuffer_Transmit(std::uint_fast8_t 
     /* Fill up frame ID */
     S32K::FlexCAN[iface_index]->RAMn[TX_MB_index * S32K::MB_Size_Words + 1] = frame.id & CAN_WMBn_ID_ID_MASK;
 
+    const std::uint32_t dlc = static_cast<std::underlying_type<libuavcan::media::CAN::FrameDLC>::type>(frame.getDLC());
+
     /* Fill up word 0 of frame and transmit it
      * Extended Data Length       (EDL) = 1
      * Bit Rate Switch            (BRS) = 1
@@ -167,14 +169,14 @@ libuavcan::Result S32K_InterfaceGroup::messageBuffer_Transmit(std::uint_fast8_t 
      * Counter Time Stamp  (TIME STAMP) = 0 ( Handled by hardware )
      */
     S32K::FlexCAN[iface_index]->RAMn[TX_MB_index * S32K::MB_Size_Words] =
-        CAN_RAMn_DATA_BYTE_1(0x20) | CAN_WMBn_CS_DLC(frame.getDLC()) | CAN_RAMn_DATA_BYTE_0(0xCC);
+        CAN_RAMn_DATA_BYTE_1(0x20) | CAN_WMBn_CS_DLC(dlc) | CAN_RAMn_DATA_BYTE_0(0xCC);
 
     /* After a succesful transmission the interrupt flag of the corresponding message buffer is set, poll with
      * timeout for it */
-    libuavcan::Result Status = S32K::flagPollTimeout_Set(S32K::FlexCAN[iface_index]->IFLAG1, 1 << TX_MB_index);
+    libuavcan::Result Status = S32K::flagPollTimeout_Set(S32K::FlexCAN[iface_index]->IFLAG1, 1u << TX_MB_index);
 
     /* Clear the flag previously polled (W1C register) */
-    S32K::FlexCAN[iface_index]->IFLAG1 |= 1 << TX_MB_index;
+    S32K::FlexCAN[iface_index]->IFLAG1 |= 1u << TX_MB_index;
 
     /* Return successful transmission request status */
     return Status;
@@ -288,7 +290,7 @@ void S32K_InterfaceGroup::S32K_libuavcan_ISR_handler(std::uint8_t instance)
         }
 
         /* Clear MB interrupt flag (write 1 to clear)*/
-        S32K::FlexCAN[instance]->IFLAG1 |= (1 << MB_index);
+        S32K::FlexCAN[instance]->IFLAG1 |= (1u << MB_index);
     }
 
     /* Enable interrupts back */
@@ -513,36 +515,36 @@ libuavcan::Result S32K_InterfaceManager::startInterfaceGroup(
 
     /* SysClock initialization for feeding 80Mhz to FlexCAN */
 
-    /* System Oscillator (SOSC) initialization for 8Mhz external crystal */
-    SCG->SOSCCSR &= ~SCG_SOSCCSR_LK_MASK;     /* Ensure the register is unlocked */
-    SCG->SOSCCSR &= ~SCG_SOSCCSR_SOSCEN_MASK; /* Disable SOSC for setup */
-    SCG->SOSCCFG = SCG_SOSCCFG_EREFS_MASK |   /* Setup external crystal for SOSC reference */
-                   SCG_SOSCCFG_RANGE(2);      /* Select 8Mhz range */
-    SCG->SOSCCSR = SCG_SOSCCSR_SOSCEN_MASK;   /* Enable SOSC reference */
-    SCG->SOSCCSR |= SCG_SOSCCSR_LK_MASK;      /* Lock the register from accidental writes */
+    // /* System Oscillator (SOSC) initialization for 8Mhz external crystal */
+    // SCG->SOSCCSR &= ~SCG_SOSCCSR_LK_MASK;     /* Ensure the register is unlocked */
+    // SCG->SOSCCSR &= ~SCG_SOSCCSR_SOSCEN_MASK; /* Disable SOSC for setup */
+    // SCG->SOSCCFG = SCG_SOSCCFG_EREFS_MASK |   /* Setup external crystal for SOSC reference */
+    //                SCG_SOSCCFG_RANGE(2);      /* Select 8Mhz range */
+    // SCG->SOSCCSR = SCG_SOSCCSR_SOSCEN_MASK;   /* Enable SOSC reference */
+    // SCG->SOSCCSR |= SCG_SOSCCSR_LK_MASK;      /* Lock the register from accidental writes */
 
-    /* Poll for valid SOSC reference, needs 4096 cycles */
-    while (!(SCG->SOSCCSR & SCG_SOSCCSR_SOSCVLD_MASK))
-    {
-    };
+    // /* Poll for valid SOSC reference, needs 4096 cycles */
+    // while (!(SCG->SOSCCSR & SCG_SOSCCSR_SOSCVLD_MASK))
+    // {
+    // };
 
-    /* System PLL (SPLL) initialization for to 160Mhz reference */
-    SCG->SPLLCSR &= ~SCG_SPLLCSR_LK_MASK;     /* Ensure the register is unlocked */
-    SCG->SPLLCSR &= ~SCG_SPLLCSR_SPLLEN_MASK; /* Disable PLL for setup */
-    SCG->SPLLCFG = SCG_SPLLCFG_MULT(24);      /* Select multiply factor of 40 for 160Mhz SPLL_CLK */
-    SCG->SPLLDIV |= SCG_SPLLDIV_SPLLDIV2(1);  /* Divide by 1 for 80Mhz at SPLLDIV2 output for LPIT */
-    SCG->SPLLCSR |= SCG_SPLLCSR_SPLLEN_MASK;  /* Enable PLL */
-    SCG->SPLLCSR |= SCG_SPLLCSR_LK_MASK;      /* Lock register from accidental writes */
+    // /* System PLL (SPLL) initialization for to 160Mhz reference */
+    // SCG->SPLLCSR &= ~SCG_SPLLCSR_LK_MASK;     /* Ensure the register is unlocked */
+    // SCG->SPLLCSR &= ~SCG_SPLLCSR_SPLLEN_MASK; /* Disable PLL for setup */
+    // SCG->SPLLCFG = SCG_SPLLCFG_MULT(24);      /* Select multiply factor of 40 for 160Mhz SPLL_CLK */
+    // SCG->SPLLDIV |= SCG_SPLLDIV_SPLLDIV2(1);  /* Divide by 1 for 80Mhz at SPLLDIV2 output for LPIT */
+    // SCG->SPLLCSR |= SCG_SPLLCSR_SPLLEN_MASK;  /* Enable PLL */
+    // SCG->SPLLCSR |= SCG_SPLLCSR_LK_MASK;      /* Lock register from accidental writes */
 
-    /* Poll for valid SPLL reference */
-    while (!(SCG->SPLLCSR & SCG_SPLLCSR_SPLLVLD_MASK))
-    {
-    };
+    // /* Poll for valid SPLL reference */
+    // while (!(SCG->SPLLCSR & SCG_SPLLCSR_SPLLVLD_MASK))
+    // {
+    // };
 
-    /* Normal RUN configuration for output clocks */
-    SCG->RCCR = SCG_RCCR_SCS(6) |     /* Select SPLL as system clock source */
-                SCG_RCCR_DIVCORE(1) | /* Additional dividers for Normal Run mode */
-                SCG_RCCR_DIVBUS(1) | SCG_RCCR_DIVSLOW(2);
+    // /* Normal RUN configuration for output clocks */
+    // SCG->RCCR = SCG_RCCR_SCS(6) |     /* Select SPLL as system clock source */
+    //             SCG_RCCR_DIVCORE(1) | /* Additional dividers for Normal Run mode */
+    //             SCG_RCCR_DIVBUS(1) | SCG_RCCR_DIVSLOW(2);
 
     /* CAN frames timestamping 64-bit timer initialization using chained LPIT channel 0 and 1 */
 

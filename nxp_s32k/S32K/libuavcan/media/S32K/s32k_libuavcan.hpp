@@ -15,7 +15,7 @@
 #define S32K_LIBUAVCAN_HPP_INCLUDED
 
 /** Driver build configurations file */
-#include "build_config.hpp"
+#include "libuavcan/media/S32K/build_config.hpp"
 
 /** libuavcan core header files */
 #include "libuavcan/media/can.hpp"
@@ -123,7 +123,7 @@ private:
 public:
     /**
      * FlexCAN ISR for frame reception, implements a walkaround to the S32K1 FlexCAN's lack of a RX FIFO neither a DMA
-     * triggering mechanism for CAN-FD frames in hardware. Completes in at max 7472 cycles when compiled with g++ at -O3. 
+     * triggering mechanism for CAN-FD frames in hardware. Completes in at max 7472 cycles when compiled with g++ at -O3.
      * @param instance The FlexCAN peripheral instance number in which the ISR will be executed, starts at 0.
      *                 differing form this library's interface indexes that start at 1.
      */

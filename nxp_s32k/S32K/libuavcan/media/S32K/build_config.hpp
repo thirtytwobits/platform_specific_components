@@ -23,7 +23,7 @@
  * Macro for additional configuration needed when using a TJA1044 transceiver, which is used
  * in NXP's UCANS32K146 board, set to 0 when using EVB's or other boards.
  */
-#ifndef
+#ifndef UAVCAN_NODE_BOARD_USED
 #    define UAVCAN_NODE_BOARD_USED 1
 #endif
 
